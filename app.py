@@ -82,23 +82,15 @@ with tab2:
                f"Total attendu : {r['irrigation_attendue_mm']} mm "
                f"(entre {min(irr['total_mm'].values())} et {max(irr['total_mm'].values())} mm).")
     st.subheader("Jours où irriguer (saison normale)")
-    j = irr["plan_jour"].copy()
-    j["jour_num"] = np.arange(len(j))
-    j["jours_depuis"] = None
-    irrigue = j[j.irrigation_mm > 0].copy()
-    irrigue["jours_depuis"] = irrigue["jour_num"].diff().fillna(irrigue["jour_num"] + 1).astype(int)
-    tab = irrigue[["date", "jours_depuis", "pluie_mm", "etc_mm", "deficit_mm", "irrigation_mm"]].copy()
-    tab["date"] = tab["date"].dt.strftime("%d/%m/%Y")
-    tab.columns = ["Date", "Jours depuis la dernière irrigation", "Pluie ce jour (mm)",
-                   "Besoin de la culture ce jour (mm)", "Eau manquante dans le sol (mm)", "Irriguer (mm)"]
-    if tab.empty:
+    j = irr["plan_jour"]
+    j = j[j.irrigation_mm > 0][["date", "pluie_mm", "etc_mm", "irrigation_mm"]].copy()
+    j["date"] = j["date"].dt.strftime("%d/%m/%Y")
+    j.columns = ["Date", "Pluie (mm)", "Besoin de la culture (mm)", "Irriguer (mm)"]
+    if j.empty:
         st.success("Aucune irrigation nécessaire dans ce scénario.")
     else:
-        st.dataframe(tab, hide_index=True)
-    st.caption("Le sol est un réservoir. Chaque jour, la culture y prélève de l'eau (« besoin de la culture ce jour »), "
-               "et la pluie en ajoute. On attend que plus de 20 mm manquent dans le sol, puis on remet ce qui manque "
-               "(30 mm au maximum par jour) : c'est pourquoi « Irriguer » est plus grand que le besoin d'un seul jour. "
-               "Il correspond à l'eau consommée depuis la dernière irrigation. 1 mm d'eau sur 1 hectare = 10 m³.")
+        st.dataframe(j, hide_index=True)
+    st.caption("1 mm d'eau sur 1 hectare = 10 m³.")
 
 with tab3:
     st.subheader("Trois scénarios de pluie pour la saison")

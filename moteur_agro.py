@@ -86,8 +86,14 @@ NOM_CULTURE = {"mais": "maïs", "riz": "riz", "igname": "igname", "manioc": "man
 
 @lru_cache(maxsize=1)
 def _et0_moy():
+    """ET0 moyenne (mm/jour) par localité, à partir des températures et du rayonnement du dataset M3.
+    Formule de Hargreaves-Samani, version rayonnement (FAO-56) :
+        ET0 = 0,0135 x (T moyenne + 17,8) x Rs x 0,408      (Rs en MJ/m²/jour)
+    (la colonne et0_mm du dataset M3 n'est pas utilisée : elle donne environ 8 mm/jour, trop élevé)."""
     m3 = pd.read_csv(DATA / "dataset_M3_etc_fao56.csv")
-    return m3.groupby("localite").et0_mm.mean()
+    tmoy = (m3.temp_max + m3.temp_min) / 2
+    et0 = (0.0135 * (tmoy + 17.8) * m3.rayonnement * 0.408).clip(2, 10)
+    return et0.groupby(m3.localite).mean()
 
 
 def courbe_kc(culture):
@@ -126,9 +132,9 @@ def bilan(pluie, etc):
         deficit = FC - sw
         irr = min(deficit, IRR_MAX) if deficit > SEUIL else 0.0
         sw += irr
-        lignes.append((p, pe, e, irr, sw, drainage))
+        lignes.append((p, pe, e, irr, sw, drainage, deficit))
     return pd.DataFrame(lignes, columns=["pluie_mm", "pluie_eff_mm", "etc_mm",
-                                         "irrigation_mm", "reserve_mm", "drainage_mm"]).round(1)
+                                         "irrigation_mm", "reserve_mm", "drainage_mm", "deficit_mm"]).round(1)
 
 
 def plan_irrigation(localite, culture, superficie_ha, date_debut, sst=0.0, enso=0.0, humidite=45.0):
